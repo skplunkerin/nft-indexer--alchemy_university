@@ -13,19 +13,34 @@ import { Alchemy, Network } from 'alchemy-sdk';
 import { useState } from 'react';
 
 function App() {
+  const config = {
+    apiKey: import.meta.env.VITE_ALCHEMY_APIKEY,
+    network: Network.ETH_MAINNET,
+  };
+  const alchemy = new Alchemy(config);
   const [userAddress, setUserAddress] = useState('');
   const [results, setResults] = useState([]);
   const [hasQueried, setHasQueried] = useState(false);
   const [tokenDataObjects, setTokenDataObjects] = useState([]);
 
-  async function getNFTsForOwner() {
-    const config = {
-      apiKey: '<-- COPY-PASTE YOUR ALCHEMY API KEY HERE -->',
-      network: Network.ETH_MAINNET,
-    };
+  async function getAddress() {
+    try {
+      const resolvedAddress = await alchemy.core.resolveName(address);
+      if (resolvedAddress !== undefined) {
+        console.log('resolvedAddress:', resolvedAddress);
+        setUserAddress(resolvedAddress);
+      }
+    } catch (error) {
+      // not sure why "reason" is the more user-friendly error, but it is.
+      console.log('resolveName() error:', error.message);
+    }
+    console.log('user address:', userAddress);
+    return userAddress;
+  }
 
-    const alchemy = new Alchemy(config);
-    const data = await alchemy.nft.getNftsForOwner(userAddress);
+  async function getNFTsForOwner() {
+    const address = await getAddress();
+    const data = await alchemy.nft.getNftsForOwner(address);
     setResults(data);
 
     const tokenDataPromises = [];
@@ -88,12 +103,18 @@ function App() {
                   color="white"
                   bg="blue"
                   w={'20vw'}
-                  key={e.id}
+                  key={i}
                 >
                   <Box>
-                    <b>Name:</b> {tokenDataObjects[i].title}&nbsp;
+                    <b>Name:</b>{' '}
+                    {tokenDataObjects[i].title ||
+                      tokenDataObjects[i].name ||
+                      tokenDataObjects[i].collectionName ||
+                      'undefined'}
+                    &nbsp;
                   </Box>
                   <Image src={tokenDataObjects[i].rawMetadata.image} />
+                  {console.log(`key ${i}`, tokenDataObjects[i])}
                 </Flex>
               );
             })}
